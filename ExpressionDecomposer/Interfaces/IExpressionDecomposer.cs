@@ -5,6 +5,6 @@ namespace ExpressionDecomposer.Interface
 {
     public interface IExpressionDecomposer
     {
-        ExpressionDecomposed DecomposeExpression(Expression expression);
+        ExpressionDecomposedTree DecomposeExpression(Expression expression);
     }
 }

@@ -11,9 +11,17 @@ namespace Demo
         {
             IExpressionDecomposer decomposer = new ExpressionDecomposer.ExpressionDecomposer();
             ParameterExpression[] para = { Expression.Parameter(typeof(Example), "Example") };
-            var teste = DynamicExpressionParser.ParseLambda(new ParsingConfig() { IsCaseSensitive = true }, para, null, "Example.Nested.NestedName == \"india\"");
+            var teste = DynamicExpressionParser.ParseLambda(new ParsingConfig() { IsCaseSensitive = true }, para, null, "Example.Nested.NestedName.Contains(\"india\") && Example.Nested.NestedName == \"india\"");
             var decomposed = decomposer.DecomposeExpression(teste);
-            Console.Write(decomposed.GetPath());
+            Console.WriteLine(teste.ToString());
+            Console.WriteLine();
+            Console.WriteLine("Left: ");
+            //Console.Write(decomposed.Left.GetAccessorPath());
+            Console.WriteLine("---");
+            Console.WriteLine("---");
+            Console.WriteLine("");
+            Console.WriteLine("Right: ");
+            //Console.Write(decomposed.Right.GetAccessorPath());
             Console.ReadKey();
         }
     }

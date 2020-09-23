@@ -1,75 +1,65 @@
 ﻿using ExpressionDecomposer.Interface;
 using ExpressionDecomposer.Models;
-using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
+using static ExpressionDecomposer.Models.ExpressionDecomposedTree;
 
 namespace ExpressionDecomposer
 {
     public class ExpressionDecomposer : IExpressionDecomposer
     {
-        public ExpressionDecomposed DecomposeExpression(Expression expression)
+        public ExpressionDecomposedTree DecomposeExpression(Expression expression)
         {
-            IList<string> propertyNames = new List<string>();
-            var memberExpressions = GetMemberExpressions(expression);
-            foreach (var member in memberExpressions)
-            {
-                propertyNames = TraverseMemberExpression(member);
-            }
-            var decomposed = new ExpressionDecomposed()
-            {
-                OrderedPropertyNames = propertyNames
-            };
-            return decomposed;
+            return FillTree(expression);
         }
 
-        private IList<string> TraverseMemberExpression(MemberExpression expression)
+        private ExpressionDecomposedTree FillTree(Expression body)
         {
-            List<string> propertyNames = new List<string>();
-            var expressionTraverse = expression;
-            while (expressionTraverse is MemberExpression)
-            {
-                propertyNames.Insert(0, expressionTraverse.Member.Name);
-                if (expressionTraverse.Expression is ParameterExpression param)
-                    propertyNames.Insert(0, param.Name);
+            ExpressionDecomposedTree tree = new ExpressionDecomposedTree(body);
+            tree.Node = FillTreeNode(body);
 
-                expressionTraverse = expressionTraverse.Expression as MemberExpression;
-            }
-            return propertyNames;
+            return tree;
         }
 
-        private static IEnumerable<MemberExpression> GetMemberExpressions(Expression body)
+        private TreeNode FillTreeNode(Expression expression)
         {
-            var expressions = new Queue<Expression>(new[] { body });
-            while (expressions.Count > 0)
+            TreeNode treeNode = new NullTreeNode();
+            if (expression is BinaryExpression binary)
             {
-                var expr = expressions.Dequeue();
-                if (expr is MemberExpression)
+                treeNode = new BinaryTreeNode()
                 {
-                    yield return ((MemberExpression)expr);
-                }
-                else if (expr is UnaryExpression)
-                {
-                    expressions.Enqueue(((UnaryExpression)expr).Operand);
-                }
-                else if (expr is BinaryExpression)
-                {
-                    var binary = expr as BinaryExpression;
-                    expressions.Enqueue(binary.Left);
-                    expressions.Enqueue(binary.Right);
-                }
-                else if (expr is MethodCallExpression)
-                {
-                    var method = expr as MethodCallExpression;
-                    foreach (var argument in method.Arguments)
-                    {
-                        expressions.Enqueue(argument);
-                    }
-                }
-                else if (expr is LambdaExpression)
-                {
-                    expressions.Enqueue(((LambdaExpression)expr).Body);
-                }
+                    Operator = expression.NodeType,
+                    Left = FillTreeNode(binary.Left),
+                    Right = FillTreeNode(binary.Right),
+                };
             }
+            else if (expression is MemberExpression)
+            {
+                treeNode = new AccessorTreeNode()
+                {
+                    Accessor = expression.ToString()
+                };
+            }
+            else if (expression is ConstantExpression)
+            {
+                treeNode = new ConstantTreeNode()
+                {
+                    Constant = expression.ToString()
+                };
+            }
+            else if (expression is MethodCallExpression methodCall)
+            {
+                treeNode = new MethodCallTreeNode()
+                {
+                    Method = methodCall.Method.Name,
+                    Arguments = methodCall.Arguments.Select(x => x.ToString()).ToArray(),
+                    Accessor = methodCall.Object.ToString()
+                };
+            }
+            else if (expression is LambdaExpression lambdaExpr)
+                treeNode = FillTreeNode(lambdaExpr.Body);
+
+            return treeNode;
         }
     }
 }
